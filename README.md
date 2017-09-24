@@ -5,6 +5,8 @@ Using the discordgo library [https://www.github.com/bwmarrin/discordgo]
 
 # To compile:
 
+* Make sure that you have your gopath set and you have added bwmarrin/discordgo from Github to it, otherwise it will not compile.
+
 1) Download the Go compiler from http://golang.org
 
 2) Go to the location of the source files
