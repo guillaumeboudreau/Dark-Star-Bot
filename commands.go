@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/bwmarrin/discordgo"
 
+	"log"
 	"strings"
 )
 
@@ -15,6 +16,7 @@ var (
 	bug    = Command{"bug", "Sends a bug report to the creator of Dark Star Bot.", bugCommand}
 	github = Command{"github", "Displays a link to the github of the bot", githubCommand}
 	vote   = Command{"vote", "Vote for either TSM or IMT, you can only pick one!", voteCommand}
+	start  = Command{"start", "Start an in-house tournament!", startInhouseCommand}
 )
 
 // Command : Every command is made into a struct to make it simpler to work with and eliminate if statements
@@ -31,6 +33,7 @@ func loadCommands() {
 	commMap[bug.name] = bug
 	commMap[github.name] = github
 	commMap[vote.name] = vote
+	commMap[start.name] = start
 }
 
 func parseCommand(s *discordgo.Session, m *discordgo.MessageCreate, command string) {
@@ -38,6 +41,17 @@ func parseCommand(s *discordgo.Session, m *discordgo.MessageCreate, command stri
 		command = string(command[1:]) // Remove the `$` from the command
 		if command == strings.ToLower(commMap[command].name) {
 			commMap[command].exec(s, m)
+		}
+	} else { // If the first word of the message does not start with $ we might be in a user chat, validate that
+		_, exist := activeFlows[inhouseIdentifier{m.ChannelID}]
+		if exist {
+			if m.Content == "exit" {
+				delete(activeFlows, inhouseIdentifier{m.ChannelID})
+			} else {
+				s.ChannelMessageSendEmbed(m.ChannelID,  &discordgo.MessageEmbed{
+					Title:       "Echo",
+					Description: m.Content})
+			}
 		}
 	}
 	return
