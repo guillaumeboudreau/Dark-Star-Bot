@@ -1,0 +1,7 @@
+*.sh
+main
+Dark-Star-Bot
+*.exe
+*.bat
+/roles/*
+*.exe~
