@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/bwmarrin/discordgo"
 
-	"log"
 	"strings"
 )
 
@@ -43,16 +42,7 @@ func parseCommand(s *discordgo.Session, m *discordgo.MessageCreate, command stri
 			commMap[command].exec(s, m)
 		}
 	} else { // If the first word of the message does not start with $ we might be in a user chat, validate that
-		_, exist := activeFlows[inhouseIdentifier{m.ChannelID}]
-		if exist {
-			if m.Content == "exit" {
-				delete(activeFlows, inhouseIdentifier{m.ChannelID})
-			} else {
-				s.ChannelMessageSendEmbed(m.ChannelID,  &discordgo.MessageEmbed{
-					Title:       "Echo",
-					Description: m.Content})
-			}
-		}
+		handleInhouseCreationFlow(s, m)
 	}
 	return
 }
