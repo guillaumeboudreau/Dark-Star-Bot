@@ -10,7 +10,7 @@ import (
 )
 
 func handleInhouseCreationFlow(s *discordgo.Session, m *discordgo.MessageCreate) {
-	_, exist := activeQuestions[m.ChannelID]
+	_, exist := inhouseState.ActiveQuestions[m.ChannelID]
 
 	if exist {
 		if strings.TrimSpace(strings.ToLower(m.Content)) == "cancel" {
@@ -18,24 +18,25 @@ func handleInhouseCreationFlow(s *discordgo.Session, m *discordgo.MessageCreate)
 				Title:       "In-House Cancelled",
 				Description: "You have cancelled the creation processus of this in-house!"})
 
-			delete(activeQuestions, m.ChannelID)
+			delete(inhouseState.ActiveQuestions, m.ChannelID)
+			saveInhouseState()
 		} else {
 			parseInhouseCommand(s, m, m.ChannelID)
+			saveInhouseState()
 		}
 	}
 }
 
 func parseInhouseCommand(s *discordgo.Session, m *discordgo.MessageCreate, inhouseID string) {
-	activeQuestion, _ := activeQuestions[inhouseID]
+	activeQuestion, _ := inhouseState.ActiveQuestions[inhouseID]
 	messageContentLowered := strings.TrimSpace(strings.ToLower(m.Content))
-	inHouse, _ := setupInhouses[inhouseID]
-	// inHouse.printInHouse()
-	expectedAnswer := activeQuestion.expectedAnswer
+	inHouse, _ := inhouseState.SetupInhouses[inhouseID]
+	expectedAnswer := activeQuestion.ExpectedAnswer
 
-	if expectedAnswer.isRestrictedAnswer {
+	if expectedAnswer.IsRestrictedAnswer {
 		answerPosition := -1
 		_ = answerPosition
-		answersList := expectedAnswer.expectedAnswers
+		answersList := expectedAnswer.ExpectedAnswers
 
 		for i := 0; i < len(answersList); i++ {
 			stringIndex := strconv.Itoa(i)
@@ -48,7 +49,8 @@ func parseInhouseCommand(s *discordgo.Session, m *discordgo.MessageCreate, inhou
 		if answerPosition == -1 {
 			errorDuringQuestion(s, m.ChannelID, fmt.Errorf("Answer \"%s\" is not valid", messageContentLowered))
 		} else {
-			err := updateInhouseProperty(inHouse, expectedAnswer.inhousePropertyName, expectedAnswer.expectedType, answersList[answerPosition])
+			err := updateInhouseProperty(&inHouse, expectedAnswer.InhousePropertyName, expectedAnswer.ExpectedType, answersList[answerPosition])
+			inhouseState.SetupInhouses[inhouseID] = inHouse
 			if err == nil {
 				askNextQuestion(s, m.ChannelID, inhouseID, answerPosition)
 			} else {
@@ -56,27 +58,27 @@ func parseInhouseCommand(s *discordgo.Session, m *discordgo.MessageCreate, inhou
 			}
 		}
 	} else {
-		err := updateInhouseProperty(inHouse, expectedAnswer.inhousePropertyName, expectedAnswer.expectedType, messageContentLowered)
+		err := updateInhouseProperty(&inHouse, expectedAnswer.InhousePropertyName, expectedAnswer.ExpectedType, m.Content)
+		inhouseState.SetupInhouses[inhouseID] = inHouse
 		if err == nil {
 			askNextQuestion(s, m.ChannelID, inhouseID, -1)
 		} else {
 			errorDuringQuestion(s, m.ChannelID, err)
 		}
 	}
-	inHouse.printInHouse()
 }
 
 func askNextQuestion(s *discordgo.Session, channelID string, inhouseID string, previousAnswerPosition int) {
-	activeQuestion, _ := activeQuestions[inhouseID]
+	activeQuestion, _ := inhouseState.ActiveQuestions[inhouseID]
 
-	if activeQuestion.isFinalQuestion {
-		inhouse, _ := setupInhouses[inhouseID]
+	if activeQuestion.IsFinalQuestion {
+		inhouse, _ := inhouseState.SetupInhouses[inhouseID]
 		sendFinalMessageToUser(s, activeQuestion, channelID, inhouse.ChannelID)
 		inhouse.Active = true
-		activeInhouse[inhouse.ChannelID] = inhouse
-		notifyInhouseActive(s, inhouse)
-		delete(setupInhouses, inhouseID)
-		delete(activeQuestions, channelID)
+		inhouseState.ActiveInhouse[inhouse.ChannelID] = inhouse
+		notifyInhouseActive(s, &inhouse)
+		delete(inhouseState.SetupInhouses, inhouseID)
+		delete(inhouseState.ActiveQuestions, channelID)
 		return
 	}
 
@@ -84,9 +86,9 @@ func askNextQuestion(s *discordgo.Session, channelID string, inhouseID string, p
 		previousAnswerPosition = 0
 	}
 
-	nextQuestion := activeQuestion.nextQuestionsPerAnswer[previousAnswerPosition]
-	sendNextQuestionMessage(s, nextQuestion, channelID, setupInhouses[inhouseID].ChannelID)
-	activeQuestions[inhouseID] = nextQuestion
+	nextQuestion := activeQuestion.NextQuestionsPerAnswer[previousAnswerPosition]
+	sendNextQuestionMessage(s, nextQuestion, channelID, inhouseState.SetupInhouses[inhouseID].ChannelID)
+	inhouseState.ActiveQuestions[inhouseID] = nextQuestion
 }
 
 func sendNextQuestionMessage(s *discordgo.Session, question inhouseQuestion, channelID string, inhouseChannelID string) {
@@ -109,6 +111,10 @@ func notifyInhouseActive(s *discordgo.Session, inhouse *inHouse) {
 				Name:  "Date",
 				Value: inhouse.Date,
 			},
+			&discordgo.MessageEmbedField{
+				Name:  "Max number of player",
+				Value: strconv.Itoa(inhouse.MaximumNumberOfParticipant),
+			},
 		}})
 }
 
@@ -125,8 +131,6 @@ func errorDuringQuestion(s *discordgo.Session, channelID string, err error) {
 }
 
 func updateInhouseProperty(inHouse *inHouse, propName string, expectedType reflect.Kind, value string) error {
-	fmt.Printf("Now in updateInhouseProperty with propName : %s ExpectedType : %s and value : %s\n", propName, expectedType.String(), value)
-
 	ps := reflect.ValueOf(inHouse)
 
 	s := ps.Elem()
@@ -136,22 +140,18 @@ func updateInhouseProperty(inHouse *inHouse, propName string, expectedType refle
 			if f.Kind() == expectedType {
 				setInhouseValue(f, expectedType, value)
 			} else {
-				fmt.Println("Is not of expected kind")
 				return fmt.Errorf("Expected property \"%s\" to be of type \"%s\"", propName, expectedType.String())
 			}
 		} else {
-			fmt.Println("Cannot set")
 			return fmt.Errorf("Property \"%s\" cannot be set", propName)
 		}
 	} else {
-		fmt.Println("Is not valid")
 		return fmt.Errorf("Property \"%s\" is not valid", propName)
 	}
 	return nil
 }
 
 func setInhouseValue(v reflect.Value, t reflect.Kind, value string) {
-	fmt.Println("Now in set inhouse")
 	switch t {
 	case reflect.String:
 		v.SetString(value)

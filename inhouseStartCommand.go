@@ -13,22 +13,25 @@ func startInhouseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if memberHasRole(member, findRoleID("admin", currentGuild)) {
 		authorChannel, _ := s.UserChannelCreate(m.Author.ID)
 
-		_, exist := activeQuestions[authorChannel.ID]
+		_, exist := inhouseState.ActiveQuestions[authorChannel.ID]
+		_, inhouseExists := inhouseState.ActiveInhouse[m.ChannelID]
 
 		if exist {
 			s.ChannelMessageSendEmbed(authorChannel.ID, &discordgo.MessageEmbed{
 				Title:       "Error",
 				Description: fmt.Sprintf("You tried starting an in-house in <#%s> but you have not finished setuping the previous one!", m.ChannelID)})
+		} else if inhouseExists {
+			s.ChannelMessageSendEmbed(authorChannel.ID, &discordgo.MessageEmbed{
+				Title:       "Error",
+				Description: fmt.Sprintf("You tried starting an in-house in <#%s> but there is already an existing one!", m.ChannelID)})
 		} else {
-			activeQuestions[authorChannel.ID] = initialQuestion
-			setupInhouses[authorChannel.ID] = &inHouse{false, "In-House", "N/A", m.ChannelID}
+			inhouseState.ActiveQuestions[authorChannel.ID] = inhouseState.InitialQuestion
+			inhouseState.SetupInhouses[authorChannel.ID] = inHouse{false, "In-House", "N/A", m.ChannelID, 10, []inHouseParticipant{}}
 			s.ChannelMessageSendEmbed(authorChannel.ID, &discordgo.MessageEmbed{
 				Title:       "Starting In-House",
-				Description: activeQuestions[authorChannel.ID].formatQuestion(m.ChannelID)})
+				Description: inhouseState.ActiveQuestions[authorChannel.ID].formatQuestion(m.ChannelID)})
+			saveInhouseState()
 		}
-	} else {
-		s.ChannelMessageSendEmbed("197502695953661952", &discordgo.MessageEmbed{
-			Title:       "Who are you",
-			Description: "Potatoes potato"})
 	}
+	s.ChannelMessageDelete(m.ChannelID, m.ID)
 }
