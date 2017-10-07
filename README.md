@@ -1,9 +1,11 @@
 # Dark-Star-Bot
 Role management and server management discord bot made for the Dark Star Community, all in golang.
 
-Using the discordgo library [https://www.github.com/bwmarrin/discordgo]
+Using the [discordgo library](https://www.github.com/bwmarrin/discordgo)
 
-# To compile:
+Use `go get github.com/bwmarrin/discordgo` to get it!
+
+## To compile:
 
 * Make sure that you have your gopath set and you have added bwmarrin/discordgo from Github to it, otherwise it will not compile.
 
@@ -15,7 +17,7 @@ Using the discordgo library [https://www.github.com/bwmarrin/discordgo]
 
 4) Continue to running the bot.
 
-# To run the bot for yourself:
+## To run the bot for yourself:
 
 1) Make a discord app
 
@@ -25,95 +27,79 @@ Using the discordgo library [https://www.github.com/bwmarrin/discordgo]
 
 4) Use an OAuth2 Generator to get an invite link
 
-5) MAKE SURE that you have a 'roles/' directory with the application, and that you have a .dsr file! That is how the bot knows which roles you can call from the bot. See below to see how to make a .dsr file properly.
+5) MAKE SURE that you have a 'roles/' directory with the application, and that you have .json files! Check below for how to do.
 
 6) Invite to your server and wammo!
 
-# How to make a .dsr file:
+## Authors
 
-## You need a serverconfig.dsr file! Please add that first.
+* **Hunter Kepley** - *Created bot* - [Github](https://www.github.com/hunterkepley) [Website](hunterkepley.github.io)
 
-It's structured like so: [No spaces!]
+## How the .json files are located and done
+The JSON files are of one config.json file, and of as many other JSON files you need, one for each server.
 
-GuildID=roles/FileName.dsr;
+They MUST be placed in EXEDIRECTORY/roles/
 
-GuildID2=roles/FileName2.dsr;
+* Check jsonParser.go for the structs, but a basic file structure is below
 
-* Example:
+#### Example location:
 
-123123123123=roles/myServer.dsr;
+~/Documents/Bot/Application
 
-123131231231=roles/myFriendsServer.dsr;
+~/Documents/Bot/roles/config.json
 
-## .DSR server file:
+~/Documents/Bot/roles/server1.json
 
-* It's structured like so:
+#### Example config.json:
 
-WHEN MAKING THE .DSR FILES, YOU MUST FOLLOW THIS FORMAT: [PLEASE READ]
+```
+{
+    "files" : [
+        {
+            "ID" : "123123123123123123",
+            "location" : "roles/server1.json"
+        },
+        {
+            "ID" : "321312312312312312",
+            "location" : "roles/server2.json"
+        }
+    ]
+}
+```
 
-LINE 1: Always the server ID with a ; on the end
+#### Example server.json:
 
-LINE 2: Always the welcome Channel ID with a ; on the end
-
-LINE 3: Always the welcome Channel Message with a ; on the end,
-
-     Add a %s where the username should go! [Ex: Welcome, %s!]
-
-LINE 4: Always the goodbye Channel ID with a ; on the end
-
-LINE 5: Always the goodbye Channel Message with a ; on the end
-
-     Add a %s where the username should go! [Ex: Welcome, %s!]
-
-LINE 6: Always the ban     Channel ID with a ; on the end
-
-LINE 7: Always the ban     Channel Message with a ; on the end
-
-     Add a %s where the username should go! [Ex: Welcome, %s!]
-
-LINES PROCEEDING: Calls=Role;
-
-     Example: call1,call2=Role;
-
-* The calls MUST NOT have spaces, the Roles CAN have spaces
-
-exampleone=Example One;
-
-## A call is what the user will type to request a role,
-
-* Example:
-#### IN DSR FILE:
-
-GuildID;
-
-welcomeChannelID;
-
-Hello, welcome to the server, %s!;
-
-goodbyeChannelID;
-
-Goodbye, %s!;
-
-banChannelID;
-
-Get out, %s!;
-
-role1,roleone=Role1;
-
-role2,roletwo=Role2;
-
-#### USER CAN TYPE THESE TO CALL THE ROLE:
-
-'$role role1'
-
-'$role roleone'
-
-#### Make SURE that the .dsr files are in a directory called 'roles' and that directory is in the same directory as the application.
-
-* Example:
-
-~/Documents/Folder1/Application
-
-~/Documents/Folder1/roles/serverconfig.dsr
-
-~/Documents/Folder1/roles/server1roles.dsr
+```
+{
+    "serverID" : "123123123123123123",
+    "roles" : [
+        {
+            "calls" : [
+                "novice"
+            ],
+            "role" : "Novice"
+        },
+        {
+            "calls" : [
+                "intermediate"
+            ],
+            "role" : "Intermediate"
+        }
+    ],
+    "welcomeMessage" : {
+            "ID" : "333333333333333333",
+            "message": "Hey %s! Welcome to the server! Go to <#333333333333333444> to set your roles!",
+            "type" : "Welcome!"
+    },
+    "goodbyeMessage" : {
+            "ID" : "222222222222222222",
+            "message" : "Goodbye, %s!",
+            "type" : "Later!"
+    },
+    "banMessage" : {
+            "ID" : "222222222222222222",
+            "message" : "We don't want you here, %s!",
+            "type" : "Ban Hammer!"
+    }
+}
+```

@@ -2,27 +2,24 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 func rolesCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	var config dsgConfig
+	cfg := loadConfig("roles/config.json")
 	channel, err := s.Channel(m.ChannelID)
+	_ = channel
 	if err != nil {
-		log.Fatal(err)
-	}
-	config, err = getConfigForGuildID(channel.GuildID)
-	_ = config
-	if err != nil {
-		log.Fatal(err)
+		fmt.Print("Error getting current channel: ", err)
 	}
 
-	ps := ""
-	if len(config.roles) > 0 {
-		for i := 0; i < len(config.roles); i++ {
-			ps += fmt.Sprintf("%s\n", config.roles[i])
+	tserver := loadServer(cfg, channel.GuildID)
+
+	var ps string
+	if len(tserver.Roles) > 0 {
+		for i := 0; i < len(tserver.Roles); i++ {
+			ps += fmt.Sprintf("%s\n", tserver.Roles[i].Role)
 		}
 	} else {
 		ps = "No roles available!"

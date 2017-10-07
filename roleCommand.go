@@ -20,27 +20,25 @@ func roleCommand(s *discordgo.Session, m *discordgo.MessageCreate) { // Add role
 }
 
 func assignRole(s *discordgo.Session, m *discordgo.MessageCreate, givenRole string) {
-	var config dsgConfig
+	cfg := loadConfig("roles/config.json")
 	channel, err := s.Channel(m.ChannelID)
+	_ = channel
 	if err != nil {
-		log.Fatal(err)
+		fmt.Print("Error getting current channel: ", err)
 	}
-	config, err = getConfigForGuildID(channel.GuildID)
-	_ = config
-	if err != nil {
-		log.Fatal(err)
-	}
+
+	tserver := loadServer(cfg, channel.GuildID)
 
 	roleUsed := false
 
 	// Handles the ingame roles
-	for i := 0; i < len(config.calls); i++ {
-		for j := 0; j < len(config.calls[i]); j++ {
+	for i := 0; i < len(tserver.Roles); i++ {
+		for j := 0; j < len(tserver.Roles[i].Calls); j++ {
 			switch givenRole {
 
-			case config.calls[i][j]:
+			case tserver.Roles[i].Calls[j]:
 				roleUsed = true
-				giveRole(s, m, config.roles[i])
+				giveRole(s, m, tserver.Roles[i].Role)
 			}
 		}
 	}

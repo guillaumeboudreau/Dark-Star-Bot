@@ -2,18 +2,15 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/bwmarrin/discordgo"
 )
 
 func goodbyeMessage(s *discordgo.Session, e *discordgo.GuildMemberRemove) {
-	config, err := getConfigForGuildID(e.GuildID)
-	if err != nil {
-		log.Fatal(err)
-	}
+	cfg := loadConfig("roles/config.json")
+	tserver := loadServer(cfg, e.GuildID)
 
-	s.ChannelMessageSendEmbed(config.goodbyeChannelID, &discordgo.MessageEmbed{
-		Title:       "Later!",
-		Description: fmt.Sprintf(config.goodbyeMessage, e.User.Username)})
+	s.ChannelMessageSendEmbed(tserver.GoodbyeMessage.ID, &discordgo.MessageEmbed{
+		Title:       tserver.GoodbyeMessage.Type,
+		Description: fmt.Sprintf(tserver.GoodbyeMessage.Message, e.User.Mention())})
 }
